@@ -23,7 +23,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombre_completo', sa.String(length=150), nullable=True),
     sa.Column('correo_electronico', sa.String(length=150), nullable=True),
-    sa.Column('password', sa.String(length=100), nullable=True),
+    sa.Column('password', sa.String(length=255), nullable=True),
     sa.Column('rol_asignado', sa.String(length=50), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('correo_electronico')
@@ -32,7 +32,7 @@ def upgrade():
         'user',
         sa.column('nombre_completo', sa.String(length=150)),
         sa.column('correo_electronico', sa.String(length=150)),
-        sa.column('password', sa.String(length=100)),
+        sa.column('password', sa.String(length=255)),
         sa.column('rol_asignado', sa.String(length=50)),
     )
     op.bulk_insert(
