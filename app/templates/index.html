@@ -33,7 +33,7 @@
             </p>
             <div class="flex flex-col sm:flex-row gap-4 pt-2">
                 {% if current_user.is_authenticated and (current_user.is_admin() or current_user.is_chef() or current_user.is_seller()) %}
-                <a href="{{ url_for('pos.index') if current_user.is_seller() else 'main.internal' }}"
+                <a href="{{ url_for('pos.index' if current_user.is_seller() else 'main.internal') }}"
                     class="bg-primary text-white h-14 px-8 rounded-xl font-bold text-base hover:bg-primary/90 transition-all shadow-xl shadow-primary/20 flex items-center justify-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" class="size-6">
                         <path
