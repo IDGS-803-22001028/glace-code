@@ -26,7 +26,8 @@
         {% if messages %}
         <div class="space-y-2 mb-8">
             {% for category, message in messages %}
-            <div class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% elif category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
+            <div
+                class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% elif category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -39,6 +40,25 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div>
+                <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Tipo de
+                    Merma</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="item_type" value="insumo" class="hidden peer" checked>
+                        <div
+                            class="flex items-center justify-center p-4 border-2 border-gray-50 rounded-2xl text-gray-400 font-bold peer-checked:border-primary peer-checked:text-primary peer-checked:bg-primary/5 transition-all italic text-sm">
+                            Insumo</div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="item_type" value="producto" class="hidden peer">
+                        <div
+                            class="flex items-center justify-center p-4 border-2 border-gray-50 rounded-2xl text-gray-400 font-bold peer-checked:border-primary peer-checked:text-primary peer-checked:bg-primary/5 transition-all italic text-sm">
+                            Producto terminado</div>
+                    </label>
+                </div>
+            </div>
+
+            <div id="insumo_block">
                 <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Producto
                     del Inventario</label>
                 <select name="insumo_id" id="insumo_select" required
@@ -47,6 +67,18 @@
                     {% for i in insumos %}
                     <option value="{{ i.id }}" data-unidad="{{ i.unidad_base.abreviatura }}">{{ i.nombre_insumo }}
                     </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="producto_block" class="hidden">
+                <label class="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Producto
+                    terminado</label>
+                <select name="producto_id" id="producto_select" disabled required
+                    class="w-full p-5 bg-gray-50 border-none rounded-2xl text-gray-600 font-bold focus:ring-4 focus:ring-primary/5 transition-all appearance-none cursor-pointer">
+                    <option value="" disabled selected>Seleccionar producto terminado...</option>
+                    {% for p in productos %}
+                    <option value="{{ p.id }}" data-unidad="uds">{{ p.nombre_producto }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -82,7 +114,7 @@
                         <input type="radio" name="causa" value="Error de Producción" class="hidden peer">
                         <div
                             class="flex items-center justify-center p-4 border-2 border-gray-50 rounded-2xl text-gray-400 font-bold peer-checked:border-primary peer-checked:text-primary peer-checked:bg-primary/5 transition-all italic text-sm">
-                            Producción
+                            Error de Producción
                         </div>
                     </label>
                     <label class="cursor-pointer">
@@ -114,11 +146,42 @@
 </main>
 
 <script>
-    // Script para autocompletar la unidad de medida según el insumo seleccionado
-    document.getElementById('insumo_select').addEventListener('change', function () {
-        const selectedOption = this.options[this.selectedIndex];
-        const unidad = selectedOption.getAttribute('data-unidad');
-        document.getElementById('unidad_medida').value = unidad || '';
+    const itemTypeRadios = document.querySelectorAll('input[name="item_type"]');
+    const insumoBlock = document.getElementById('insumo_block');
+    const productoBlock = document.getElementById('producto_block');
+    const insumoSelect = document.getElementById('insumo_select');
+    const productoSelect = document.getElementById('producto_select');
+    const unidadMedida = document.getElementById('unidad_medida');
+
+    const updateUnit = () => {
+        const selectedOption = document.querySelector('select:not([disabled]) option:checked');
+        unidadMedida.value = selectedOption ? selectedOption.getAttribute('data-unidad') || 'uds' : '';
+    };
+
+    const toggleItemType = (type) => {
+        if (type === 'producto') {
+            insumoBlock.classList.add('hidden');
+            productoBlock.classList.remove('hidden');
+            insumoSelect.disabled = true;
+            productoSelect.disabled = false;
+        } else {
+            insumoBlock.classList.remove('hidden');
+            productoBlock.classList.add('hidden');
+            insumoSelect.disabled = false;
+            productoSelect.disabled = true;
+        }
+        updateUnit();
+    };
+
+    itemTypeRadios.forEach((radio) => {
+        radio.addEventListener('change', () => toggleItemType(radio.value));
+    });
+
+    insumoSelect.addEventListener('change', updateUnit);
+    productoSelect.addEventListener('change', updateUnit);
+
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleItemType(document.querySelector('input[name="item_type"]:checked').value);
     });
 </script>
 {% endblock %}

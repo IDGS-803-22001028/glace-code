@@ -102,7 +102,10 @@ def create():
         if not recipe:
             flash('La receta seleccionada no existe o ya no está disponible.', 'danger')
             return redirect(url_for('production.create'))
-
+        cantidad_ordenes = request.form.get('cantidad_ordenes', type=int, default=1)
+        if cantidad_ordenes is None or cantidad_ordenes < 1:
+            flash('La cantidad de órdenes debe ser al menos 1.', 'danger')
+            return redirect(url_for('production.create'))
         # --- Validar insumos suficientes (con conversión de unidades) ---
         # Primero calculamos cuánto se necesita de cada insumo en su unidad base
         # para poder comparar contra stock_actual (que siempre está en unidad base).
@@ -122,18 +125,19 @@ def create():
                 conversion_errors.append(err)
                 continue
 
+            cantidad_base_total = cantidad_base * cantidad_ordenes
+            cantidad_detalle_total = detail.cantidad * cantidad_ordenes
             unidad_base_abr = insumo.unidad_base.abreviatura if insumo.unidad_base else ''
             unidad_detalle_abr = detail.unidad_medida.abreviatura if detail.unidad_medida else ''
 
-            if insumo.stock_actual < cantidad_base:
-                # Mostrar el mensaje con las unidades del detalle para mayor claridad
+            if insumo.stock_actual < cantidad_base_total:
                 stock_errors.append(
-                    f"{insumo.nombre_insumo}: necesita {detail.cantidad} {unidad_detalle_abr} "
-                    f"({cantidad_base:.4g} {unidad_base_abr}), "
+                    f"{insumo.nombre_insumo}: necesita {cantidad_detalle_total} {unidad_detalle_abr} "
+                    f"({cantidad_base_total:.4g} {unidad_base_abr}), "
                     f"stock disponible: {insumo.stock_actual} {unidad_base_abr}"
                 )
             else:
-                deductions.append((insumo, cantidad_base))
+                deductions.append((insumo, cantidad_base_total))
 
         if conversion_errors:
             for msg in conversion_errors:
@@ -151,14 +155,16 @@ def create():
             for insumo_obj, cantidad_base in deductions:
                 insumo_obj.stock_actual -= cantidad_base
 
-            # --- Crear la tarea de producción ---
-            nueva_tarea = ProductionTask(
-                receta_id=recipe_id,
-                estado='Pendiente',
-                prioridad=prioridad,
-                fecha_limite=fecha_limite,
-            )
-            db.session.add(nueva_tarea)
+            # --- Crear las tareas de producción ---
+            for _ in range(cantidad_ordenes):
+                nueva_tarea = ProductionTask(
+                    receta_id=recipe_id,
+                    estado='Pendiente',
+                    prioridad=prioridad,
+                    fecha_limite=fecha_limite,
+                )
+                db.session.add(nueva_tarea)
+
             db.session.commit()
             user_logger.log_action(
                 current_user,
@@ -167,11 +173,18 @@ def create():
                 success=True,
             )
 
-            flash(
-                f'Orden de producción creada: {recipe.product.nombre_producto if recipe.product else ""} '
-                f'– {recipe.nombre_variante}. Se actualizó el inventario.',
-                'success'
-            )
+            if cantidad_ordenes == 1:
+                flash(
+                    f'Orden de producción creada: {recipe.product.nombre_producto if recipe.product else ""} '
+                    f'– {recipe.nombre_variante}. Se actualizó el inventario.',
+                    'success'
+                )
+            else:
+                flash(
+                    f'Se crearon {cantidad_ordenes} órdenes de producción: {recipe.product.nombre_producto if recipe.product else ""} '
+                    f'– {recipe.nombre_variante}. Se actualizó el inventario.',
+                    'success'
+                )
             return redirect(url_for('production.index'))
 
         except Exception as e:
@@ -259,6 +272,10 @@ def delete(id: int):
     task = db.session.get(ProductionTask, id)
     if not task or not task.is_active:
         flash('Orden de producción no encontrada.', 'danger')
+        return redirect(url_for('production.index'))
+
+    if task.estado != 'Pendiente':
+        flash(f'No es posible eliminar porque está en estado {task.estado}.', 'warning')
         return redirect(url_for('production.index'))
 
     if request.method == 'POST':

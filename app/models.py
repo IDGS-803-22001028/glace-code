@@ -18,10 +18,14 @@ class User(db.Model, UserMixin):
     correo_electronico = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password = db.Column(db.String(255), nullable=False)
     rol_asignado = db.Column(db.String(50), nullable=False, index=True)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     # 1:1 relationship with Customer
     customer = db.relationship("Customer", back_populates="user", uselist=False)
+
+    __table_args__ = (
+        db.Index('ix_user_rol_asignado_is_active', 'rol_asignado', 'is_active'),
+    )
     
     def __init__(self, nombre_completo: str, correo_electronico: str, password: str, rol_asignado: str, is_active: bool = True):
         self.nombre_completo = nombre_completo.strip()
@@ -73,7 +77,7 @@ class Customer(db.Model):
     telefono = db.Column(db.String(20))
     direccion_despacho = db.Column(db.String(200))
     puntos_acumulados = db.Column(db.Integer, default=0, nullable=False)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     user = db.relationship("User", back_populates="customer")
     
@@ -102,11 +106,11 @@ class Insumo(db.Model):
     __tablename__ = 'INSUMO'
     id = db.Column(db.Integer, primary_key=True)
     nombre_insumo = db.Column(db.String(100), nullable=False)
-    categoria = db.Column(db.String(50))
+    categoria = db.Column(db.String(50), index=True)
     stock_actual = db.Column(db.Float, default=0)
     stock_minimo_alerta = db.Column(db.Float, default=0)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
-    unidad_base_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'))
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    unidad_base_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'), index=True)
 
     unidad_base = db.relationship('UnidadMedida')
     conversiones = db.relationship('ConversionUnidad', back_populates='insumo')
@@ -124,9 +128,9 @@ class ConversionUnidad(db.Model):
     __tablename__ = 'CONVERSION_UNIDAD'
     id = db.Column(db.Integer, primary_key=True)
     factor_conversion = db.Column(db.Float)
-    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'))
-    unidad_destino_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'))
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'), index=True)
+    unidad_destino_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'), index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     insumo = db.relationship('Insumo', back_populates='conversiones')
     unidad_destino = db.relationship('UnidadMedida')
@@ -134,12 +138,13 @@ class ConversionUnidad(db.Model):
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre_producto = db.Column(db.String(100), nullable=False)
-    categoria = db.Column(db.String(50))
+    categoria = db.Column(db.String(50), index=True)
     precio_venta = db.Column(db.Float, default=0)
     stock = db.Column(db.Integer, default=0)
+    pedido_minimo = db.Column(db.Integer, default=1, nullable=False)
     imagen_url = db.Column(db.String(200))
     descripcion = db.Column(db.String(200))
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     recipes = db.relationship('Recipe', back_populates='product')
 
@@ -186,21 +191,21 @@ class Product(db.Model):
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), index=True)
     nombre_variante = db.Column(db.String(100), nullable=False)
     cantidad_producida = db.Column(db.Float, default=0)
     tiempo_estimado_min = db.Column(db.Integer, default=0)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     product = db.relationship('Product', back_populates='recipes')
     details = db.relationship('RecipeDetail', back_populates='recipe')
 
 class RecipeDetail(db.Model):
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), primary_key=True)
-    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'), primary_key=True)
+    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'), primary_key=True, index=True)
     cantidad = db.Column(db.Float, default=0)
-    unidad_medida_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'))
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    unidad_medida_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'), index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     recipe = db.relationship('Recipe', back_populates='details')
     insumo = db.relationship('Insumo')
@@ -226,36 +231,46 @@ class RecipeDetail(db.Model):
 class Merma(db.Model):
     __tablename__ = 'MERMA'
     id = db.Column(db.Integer, primary_key=True)
-    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'))
+    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'), index=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey('product.id'), index=True)
     cantidad_perdida = db.Column(db.Float, nullable=False)
     causa = db.Column(db.String(255))
     notas_adicionales = db.Column(db.Text)
-    fecha_registro = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    fecha_registro = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
     
     insumo = db.relationship('Insumo', backref='mermas_registradas')
+    producto = db.relationship('Product')
+
+    __table_args__ = (
+        db.Index('ix_merma_is_active_fecha_registro', 'is_active', 'fecha_registro'),
+    )
 
 class ProductionTask(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    receta_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    receta_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False, index=True)
     
     # Estados del diseño: 'Pendiente', 'En Horno', 'Decorando', 'Listo'
-    estado = db.Column(db.String(20), default='Pendiente')
+    estado = db.Column(db.String(20), default='Pendiente', index=True)
     
     # Prioridades: 'Baja', 'Media', 'Alta'
-    prioridad = db.Column(db.String(10), default='Media')
+    prioridad = db.Column(db.String(10), default='Media', index=True)
     
-    fecha_limite = db.Column(db.DateTime, nullable=False)
+    fecha_limite = db.Column(db.DateTime, nullable=False, index=True)
     fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     # Relación para obtener el nombre del producto, tiempo estimado y cantidad a producir
     receta = db.relationship('Recipe')
 
+    __table_args__ = (
+        db.Index('ix_production_task_prioridad_is_active_fecha_limite', 'prioridad', 'is_active', 'fecha_limite'),
+    )
+
 class Venta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    cliente_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True)
-    fecha_hora = db.Column(db.DateTime, default=db.func.current_timestamp())
+    cliente_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=True, index=True)
+    fecha_hora = db.Column(db.DateTime, default=db.func.current_timestamp(), index=True)
     metodo_pago = db.Column(db.String(50))  # efectivo o tarjeta
     monto_recibido = db.Column(db.Float, default=0)
     monto_cambio = db.Column(db.Float, default=0)
@@ -279,8 +294,8 @@ class Venta(db.Model):
 
 class DetalleVenta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    venta_id = db.Column(db.Integer, db.ForeignKey('venta.id'), nullable=False)
-    producto_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    venta_id = db.Column(db.Integer, db.ForeignKey('venta.id'), nullable=False, index=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False, index=True)
     cantidad = db.Column(db.Integer, nullable=False)
     precio_unitario_aplicado = db.Column(db.Float, nullable=False)
     
@@ -302,24 +317,28 @@ class CustomOrder(db.Model):
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre_empresa = db.Column(db.String(100), nullable=False)
-    categoria_insumos = db.Column(db.String(50), nullable=False)
+    categoria_insumos = db.Column(db.String(50), nullable=False, index=True)
     nombre_contacto = db.Column(db.String(100), nullable=False)
     telefono = db.Column(db.String(20), nullable=False)
     correo_electronico = db.Column(db.String(100), nullable=False)
     direccion_fisica = db.Column(db.String(200))
     notas_adicionales = db.Column(db.Text)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     purchases = db.relationship('Purchase', back_populates='supplier')
     
 class Purchase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-    fecha_orden = db.Column(db.DateTime, default=db.func.current_timestamp())
-    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False, index=True)
+    fecha_orden = db.Column(db.DateTime, default=db.func.current_timestamp(), index=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     supplier = db.relationship('Supplier', back_populates='purchases')
     detalles = db.relationship('PurchaseDetail', back_populates='purchase', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        db.Index('ix_purchase_is_active_supplier_id', 'is_active', 'supplier_id'),
+    )
 
     @property
     def proveedor_nombre(self):
@@ -331,11 +350,11 @@ class Purchase(db.Model):
     
 class PurchaseDetail(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    purchase_id = db.Column(db.Integer, db.ForeignKey('purchase.id'), nullable=False)
-    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'), nullable=False)
+    purchase_id = db.Column(db.Integer, db.ForeignKey('purchase.id'), nullable=False, index=True)
+    insumo_id = db.Column(db.Integer, db.ForeignKey('INSUMO.id'), nullable=False, index=True)
     cantidad = db.Column(db.Float, nullable=False)
     precio_unitario = db.Column(db.Float, nullable=False)
-    unidad_medida_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'), nullable=False)
+    unidad_medida_id = db.Column(db.Integer, db.ForeignKey('UNIDAD_MEDIDA.id'), nullable=False, index=True)
 
     purchase = db.relationship('Purchase', back_populates='detalles')
     insumo = db.relationship('Insumo', backref='compras')

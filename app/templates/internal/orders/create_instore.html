@@ -1,0 +1,348 @@
+{% extends "internal/base.html" %}
+
+{% block title %}Registrar Pedido Personalizado en Tienda{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900">Registro de pedido personalizado en tienda</h1>
+            <p class="text-sm text-slate-500 mt-1">Registra pedidos con varios productos, evento y decoración por
+                unidad.</p>
+        </div>
+    </header>
+
+    <form method="POST" action="{{ url_for('orders.create_instore_post') }}" id="instoreOrderForm" class="space-y-8">
+        <input type="hidden" name="items_json" id="items_json">
+        <input type="hidden" name="metodo_pago" id="metodo_pago_input" value="efectivo">
+        <input type="hidden" name="monto_recibido" id="monto_recibido_input" value="0">
+        <input type="hidden" name="monto_cambio" id="monto_cambio_input" value="0">
+        <input type="hidden" name="total" id="total_input" value="0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="grid gap-6 lg:grid-cols-2">
+            <div class="space-y-6">
+                <div class="bg-white shadow-sm rounded-3xl p-6 border border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4">Cliente y datos de recogida</h2>
+                    <div class="space-y-4">
+                        <label class="block text-sm font-semibold text-slate-700">Cliente</label>
+                        <select name="cliente_id" required
+                            class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            <option value="">Selecciona un cliente</option>
+                            {% for cliente in customers %}
+                            <option value="{{ cliente.id }}">{{ cliente.user.nombre_completo }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <label class="block text-sm font-semibold text-slate-700">Lugar de recogida</label>
+                        <select name="lugar_entrega" required
+                            class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            <option value="" disabled selected>Selecciona lugar…</option>
+                            <option value="tienda">🏬 Recoger en Tienda</option>
+                            <option value="domicilio">🏠 Entrega a Domicilio</option>
+                        </select>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700">Fecha de entrega</label>
+                                <input type="date" id="fecha_entrega" name="fecha_entrega" required
+                                    class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700">Hora de entrega</label>
+                                <input type="time" name="hora_entrega" required
+                                    class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-sm rounded-3xl p-6 border border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4">Pago en tienda</h2>
+                    <div class="space-y-4">
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <button type="button" id="btnEfectivo"
+                                class="p-4 rounded-2xl border border-pink-500 bg-pink-50 text-pink-700 font-semibold">Efectivo</button>
+                            <button type="button" id="btnTarjeta"
+                                class="p-4 rounded-2xl border border-slate-200 bg-white text-slate-600 font-semibold">Tarjeta</button>
+                        </div>
+                        <div id="efectivoSection" class="space-y-3">
+                            <label class="block text-sm font-semibold text-slate-700">Monto recibido</label>
+                            <input type="number" step="0.01" min="0" id="monto_recibido_visible" value="0"
+                                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            <div class="flex justify-between items-center text-sm text-slate-500">
+                                <span>Total a pagar</span>
+                                <span id="totalLabel">$0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm font-bold text-slate-900">
+                                <span>Cambio estimado</span>
+                                <span id="cambioLabel">$0.00</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500">Los pedidos personalizados en tienda se registran como
+                            <strong>Pendiente</strong> para producción.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-white shadow-sm rounded-3xl p-6 border border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4">Agregar producto personalizado</h2>
+                    <div class="space-y-4">
+                        <label class="block text-sm font-semibold text-slate-700">Producto</label>
+                        <select id="selectProduct"
+                            class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            <option value="">Selecciona un producto</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" data-precio="{{ product.precio_venta }}">{{
+                                product.nombre_producto }} - ${{ '%.2f'|format(product.precio_venta) }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700">Cantidad</label>
+                                <input type="number" id="inputCantidad" min="1" value="1"
+                                    class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700">Tipo de evento</label>
+                                <select id="inputEvento"
+                                    class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                                    <option value="" disabled selected>Selecciona…</option>
+                                    <option value="cumpleaños">🎂 Cumpleaños</option>
+                                    <option value="boda">💍 Boda</option>
+                                    <option value="baby_shower">🍼 Baby Shower</option>
+                                    <option value="graduacion">🎓 Graduación</option>
+                                    <option value="aniversario">🌹 Aniversario</option>
+                                    <option value="empresarial">🏢 Evento Empresarial</option>
+                                    <option value="navidad">🎄 Navidad / Año Nuevo</option>
+                                    <option value="otro">✨ Otro</option>
+                                </select>
+                            </div>
+                        </div>
+                        <label class="block text-sm font-semibold text-slate-700">Instrucciones de decoración</label>
+                        <textarea id="inputInstrucciones" rows="3" placeholder="Texto, colores, detalles especiales..."
+                            class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white"></textarea>
+                        <button type="button" id="btnAddItem"
+                            class="w-full py-3 rounded-2xl bg-primary text-white font-bold">Agregar al pedido</button>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-sm rounded-3xl p-6 border border-slate-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-slate-900">Productos cargados</h2>
+                        <span id="countItems" class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">0
+                            items</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-700">
+                            <thead>
+                                <tr>
+                                    <th class="pb-3">Producto</th>
+                                    <th class="pb-3">Cantidad</th>
+                                    <th class="pb-3">Evento</th>
+                                    <th class="pb-3">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-200 text-right">
+                        <p class="text-sm text-slate-500">Total estimado</p>
+                        <p class="text-2xl font-black text-slate-900" id="summaryTotal">$0.00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3">
+            <a href="{{ url_for('orders.index') }}"
+                class="inline-flex items-center justify-center px-6 py-3 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar</a>
+            <button type="submit"
+                class="inline-flex items-center justify-center px-6 py-3 rounded-2xl bg-primary text-white text-sm font-semibold">Registrar
+                pedido</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const products = {{ products_json| tojson }};
+    const items = [];
+    const itemsJson = document.getElementById('items_json');
+    const totalInput = document.getElementById('total_input');
+    const metodoPagoInput = document.getElementById('metodo_pago_input');
+    const montoRecibidoInput = document.getElementById('monto_recibido_input');
+    const montoCambioInput = document.getElementById('monto_cambio_input');
+    const montoRecibidoVisible = document.getElementById('monto_recibido_visible');
+    const totalLabel = document.getElementById('totalLabel');
+    const cambioLabel = document.getElementById('cambioLabel');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const efectivoSection = document.getElementById('efectivoSection');
+    const btnEfectivo = document.getElementById('btnEfectivo');
+    const btnTarjeta = document.getElementById('btnTarjeta');
+    const itemsTableBody = document.getElementById('itemsTableBody');
+    const countItems = document.getElementById('countItems');
+    const fechaEntregaInput = document.getElementById('fecha_entrega');
+
+    function formatCurrency(value) {
+        return `$${Number(value).toFixed(2)}`;
+    }
+
+    function renderItems() {
+        itemsTableBody.innerHTML = '';
+        let total = 0;
+        items.forEach((item, index) => {
+            total += item.precio * item.cantidad;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="py-3 pr-4">${item.nombre}</td>
+                <td class="py-3 pr-4">${item.cantidad}</td>
+                <td class="py-3 pr-4">${item.tipo_evento}</td>
+                <td class="py-3 pr-4"><button type="button" class="text-sm text-red-600 hover:underline" onclick="removeItem(${index})">Eliminar</button></td>
+            `;
+            itemsTableBody.appendChild(row);
+        });
+        countItems.innerText = `${items.length} items`;
+        summaryTotal.innerText = formatCurrency(total);
+        totalLabel.innerText = formatCurrency(total);
+        totalInput.value = total.toFixed(2);
+        itemsJson.value = JSON.stringify(items);
+        updatePayment(total);
+    }
+
+    function updatePayment(total) {
+        const metodo = metodoPagoInput.value;
+        if (metodo === 'efectivo') {
+            const recibido = parseFloat(montoRecibidoVisible.value || '0');
+            const cambio = Math.max(0, recibido - total);
+            montoRecibidoInput.value = recibido.toFixed(2);
+            montoCambioInput.value = cambio.toFixed(2);
+            cambioLabel.innerText = formatCurrency(cambio);
+        } else {
+            montoRecibidoInput.value = total.toFixed(2);
+            montoCambioInput.value = '0.00';
+            cambioLabel.innerText = formatCurrency(0);
+        }
+    }
+
+    function setPaymentMethod(method) {
+        metodoPagoInput.value = method;
+        if (method === 'efectivo') {
+            efectivoSection.classList.remove('hidden');
+            btnEfectivo.classList.add('border-pink-500', 'bg-pink-50', 'text-pink-700');
+            btnTarjeta.classList.remove('border-pink-500', 'bg-pink-50', 'text-pink-700');
+            btnTarjeta.classList.add('border-slate-200', 'bg-white', 'text-slate-600');
+        } else {
+            efectivoSection.classList.add('hidden');
+            btnTarjeta.classList.add('border-pink-500', 'bg-pink-50', 'text-pink-700');
+            btnEfectivo.classList.remove('border-pink-500', 'bg-pink-50', 'text-pink-700');
+            btnEfectivo.classList.add('border-slate-200', 'bg-white', 'text-slate-600');
+        }
+        renderItems();
+    }
+
+    function setMinimumDeliveryDate() {
+        if (!fechaEntregaInput) return;
+        const now = new Date();
+        now.setDate(now.getDate() + 2);
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const minDate = `${year}-${month}-${day}`;
+        fechaEntregaInput.min = minDate;
+        if (!fechaEntregaInput.value || fechaEntregaInput.value < minDate) {
+            fechaEntregaInput.value = minDate;
+        }
+    }
+
+    function findProduct(productId) {
+        return products.find(product => product.id === productId);
+    }
+
+    function updateQuantityMin(productId) {
+        const selectedProduct = findProduct(productId);
+        const quantityInput = document.getElementById('inputCantidad');
+        if (!selectedProduct || !quantityInput) return;
+        quantityInput.min = selectedProduct.pedido_minimo || 1;
+        if (parseInt(quantityInput.value, 10) < quantityInput.min) {
+            quantityInput.value = quantityInput.min;
+        }
+    }
+
+    function addItem() {
+        const productSelect = document.getElementById('selectProduct');
+        const cantidad = parseInt(document.getElementById('inputCantidad').value, 10);
+        const tipoEvento = document.getElementById('inputEvento').value.trim();
+        const instrucciones = document.getElementById('inputInstrucciones').value.trim();
+        const productId = parseInt(productSelect.value, 10);
+        const selectedProduct = findProduct(productId);
+
+        if (!productId || !selectedProduct) {
+            alert('Selecciona un producto válido.');
+            return;
+        }
+        if (cantidad < selectedProduct.pedido_minimo) {
+            alert(`La cantidad mínima para ${selectedProduct.nombre_producto} es ${selectedProduct.pedido_minimo}.`);
+            return;
+        }
+        if (!tipoEvento) {
+            alert('Agrega el tipo de evento para este producto.');
+            return;
+        }
+
+        items.push({
+            product_id: productId,
+            nombre: selectedProduct.nombre_producto,
+            cantidad,
+            precio: selectedProduct.precio_venta,
+            tipo_evento: tipoEvento,
+            instrucciones: instrucciones || 'Sin instrucciones'
+        });
+
+        productSelect.value = '';
+        document.getElementById('inputCantidad').value = '1';
+        document.getElementById('inputEvento').value = '';
+        document.getElementById('inputInstrucciones').value = '';
+        renderItems();
+    }
+
+    function removeItem(index) {
+        items.splice(index, 1);
+        renderItems();
+    }
+
+    document.getElementById('btnAddItem').addEventListener('click', addItem);
+    btnEfectivo.addEventListener('click', () => setPaymentMethod('efectivo'));
+    btnTarjeta.addEventListener('click', () => setPaymentMethod('tarjeta'));
+    montoRecibidoVisible.addEventListener('input', () => renderItems());
+    document.getElementById('selectProduct').addEventListener('change', function () {
+        const productId = parseInt(this.value, 10);
+        if (productId) {
+            updateQuantityMin(productId);
+        }
+    });
+
+    document.getElementById('instoreOrderForm').addEventListener('submit', function (event) {
+        const total = parseFloat(totalInput.value || '0');
+        if (items.length === 0) {
+            event.preventDefault();
+            alert('Debes agregar al menos un producto al pedido.');
+            return;
+        }
+        if (metodoPagoInput.value === 'efectivo') {
+            const recibido = parseFloat(montoRecibidoVisible.value || '0');
+            if (recibido < total) {
+                event.preventDefault();
+                alert('El monto recibido debe ser igual o mayor al total.');
+                return;
+            }
+        }
+        itemsJson.value = JSON.stringify(items);
+    });
+
+    setMinimumDeliveryDate();
+    setPaymentMethod('efectivo');
+    renderItems();
+</script>
+{% endblock %}

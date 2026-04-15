@@ -357,11 +357,12 @@
         `;
         }
 
-        const iva = subtotal * 0.16;
-        const total = subtotal + iva;
+        const total = subtotal;
+        const base = subtotal / 1.16;
+        const iva = subtotal - base;
 
         carritoItems.innerHTML = html;
-        subtotalSpan.innerText = `$${subtotal.toFixed(2)}`;
+        subtotalSpan.innerText = `$${base.toFixed(2)}`;
         ivaSpan.innerText = `$${iva.toFixed(2)}`;
         totalSpan.innerText = `$${total.toFixed(2)}`;
     }

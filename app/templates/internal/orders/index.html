@@ -20,6 +20,11 @@
         <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider">
             {{ sales|length }} Pedidos Activos
         </span>
+        {% if current_user.is_seller() %}
+        <a href="{{ url_for('orders.create_instore') }}" class="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-dark transition">
+            Registrar pedido en tienda
+        </a>
+        {% endif %}
     </div>
 </header>
 
@@ -40,7 +45,7 @@
         <div class="bg-white rounded-2xl border border-primary/10 shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div class="p-6 flex flex-col lg:flex-row gap-6">
                 <!-- Order Header Info -->
-                <div class="flex-grow flex flex-col md:flex-row gap-6">
+                <div class="grow flex flex-col md:flex-row gap-6">
                     <div class="flex flex-col">
                         <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">ID Pedido</span>
                         <span class="text-xl font-black text-slate-900">#{{ "%05d"|format(venta.id) }}</span>
@@ -63,7 +68,7 @@
                 </div>
 
                 <!-- Status Badge -->
-                <div class="flex items-center lg:justify-end gap-3 min-w-[180px]">
+                <div class="flex items-center lg:justify-end gap-3 min-w-45">
                     {% if venta.estado == 'Pendiente' %}
                         <span class="px-4 py-2 rounded-full bg-amber-100 text-amber-700 text-xs font-black uppercase tracking-widest border border-amber-200">
                             {{ venta.estado }}
@@ -90,7 +95,7 @@
                 <div class="space-y-4">
                     {% for detalle in venta.detalles %}
                     <div class="flex flex-col md:flex-row md:items-start gap-4 p-4 rounded-xl bg-white border border-primary/5 shadow-sm">
-                        <div class="size-16 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0">
+                        <div class="size-16 rounded-lg bg-slate-100 overflow-hidden shrink-0">
                             {% if detalle.producto.imagen_url %}
                                 <img src="{{ detalle.producto.imagen_url }}" class="w-full h-full object-cover">
                             {% else %}
@@ -99,7 +104,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="flex-grow">
+                        <div class="grow">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <span class="text-sm font-black text-slate-900 block">{{ detalle.producto.nombre_producto }}</span>

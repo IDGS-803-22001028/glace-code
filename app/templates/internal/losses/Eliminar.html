@@ -1,15 +1,22 @@
 {% extends "internal/base.html" %} {% block content %}
-<main class="p-4 sm:p-10 sm:ml-64 mt-16 min-h-screen pb-24 bg-[#fdfdfd]">
+<main>
     <div class="max-w-6xl mx-auto">
-        
-        <a href="{{ url_for('losses.index') }}" class="flex items-center text-gray-400 hover:text-mg-magenta transition-all mb-8 text-sm font-bold group w-fit">
-            <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+
+        <a href="{{ url_for('losses.index') }}"
+            class="flex items-center text-gray-400 hover:text-mg-magenta transition-all mb-8 text-sm font-bold group w-fit">
+            <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
             Volver a Mermas
         </a>
 
         <div class="mb-10">
             <div class="flex items-center space-x-2 mb-2 text-mg-magenta">
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
                 <span class="text-[10px] font-black uppercase tracking-[0.2em]">MAISON GLACÉ</span>
             </div>
             <h1 class="text-4xl font-black text-[#1a202c] tracking-tight">Confirmar Eliminación de Merma</h1>
@@ -19,7 +26,8 @@
         {% if messages %}
         <div class="space-y-2 mb-8">
             {% for category, message in messages %}
-            <div class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% elif category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
+            <div
+                class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% elif category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -28,53 +36,66 @@
         {% endwith %}
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
+
             <div class="lg:col-span-2 space-y-6">
-                
+
                 <div class="bg-red-50 border border-red-100 rounded-4xl p-8 flex items-start space-x-4">
                     <div class="text-red-500 mt-1">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
                     </div>
                     <div>
                         <h3 class="text-red-500 font-black text-lg">Atención: Acción Irreversible</h3>
-                        <p class="text-red-400 font-medium mt-1 italic">Estás a punto de eliminar permanentemente esta merma de la base de datos de Maison Glacé. Esta acción no se puede deshacer.</p>
+                        <p class="text-red-400 font-medium mt-1 italic">Estás a punto de eliminar permanentemente esta
+                            merma de la base de datos de Maison Glacé. Esta acción no se puede deshacer.</p>
                     </div>
                 </div>
 
                 <div class="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-sm space-y-8">
                     <div class="flex justify-between items-center border-b border-gray-50 pb-6">
                         <span class="text-[11px] font-black text-gray-300 uppercase tracking-[0.2em]">Ítem</span>
-                        <span class="text-xl font-black text-[#2d3748]">{{ merma.insumo.nombre_insumo }}</span>
+                        <span class="text-xl font-black text-[#2d3748]">{{ merma.insumo.nombre_insumo if merma.insumo
+                            else merma.producto.nombre_producto if merma.producto else 'Desconocido' }}</span>
                     </div>
 
                     <div class="flex justify-between items-center border-b border-gray-50 pb-6">
                         <span class="text-[11px] font-black text-gray-300 uppercase tracking-[0.2em]">Cantidad</span>
-                        <span class="text-xl font-bold text-gray-600 italic">{{ merma.cantidad_perdida }} {{ merma.insumo.unidad_base.abreviatura }}</span>
+                        <span class="text-xl font-bold text-gray-600 italic">{{ merma.cantidad_perdida }} {{
+                            merma.insumo.unidad_base.abreviatura if merma.insumo and merma.insumo.unidad_base else 'uds'
+                            }}</span>
                     </div>
 
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] font-black text-gray-300 uppercase tracking-[0.2em]">Fecha</span>
-                        <span class="text-xl font-bold text-gray-600">{{ merma.fecha_registro.strftime('%d %B, %Y') }}</span>
+                        <span class="text-xl font-bold text-gray-600">{{ merma.fecha_registro.strftime('%d %B, %Y')
+                            }}</span>
                     </div>
                 </div>
             </div>
 
             <div class="bg-white border border-gray-100 rounded-[2.5rem] p-10 shadow-sm h-fit">
                 <h3 class="text-xl font-black text-[#2d3748] mb-8">Confirmar acción</h3>
-                
+
                 <div class="space-y-4">
                     <form action="{{ url_for('losses.eliminar_merma', id=merma.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <button type="submit" class="w-full flex items-center justify-center py-5 bg-red-500 text-white font-black rounded-2xl shadow-xl shadow-red-100 hover:bg-red-600 transition-all group mb-4 cursor-pointer">
-                            <svg class="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm4 12a1 1 0 100-2 1 1 0 000 2z"/>
+
+                        <button type="submit"
+                            class="w-full flex items-center justify-center py-5 bg-red-500 text-white font-black rounded-2xl shadow-xl shadow-red-100 hover:bg-red-600 transition-all group mb-4 cursor-pointer">
+                            <svg class="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path
+                                    d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm4 12a1 1 0 100-2 1 1 0 000 2z" />
                             </svg>
                             Confirmar Eliminación
                         </button>
                     </form>
-                    
-                    <a href="{{ url_for('losses.index') }}" class="w-full flex items-center justify-center py-5 bg-gray-50 text-gray-400 font-bold rounded-2xl hover:bg-gray-100 transition-all">
+
+                    <a href="{{ url_for('losses.index') }}"
+                        class="w-full flex items-center justify-center py-5 bg-gray-50 text-gray-400 font-bold rounded-2xl hover:bg-gray-100 transition-all">
                         <span class="mr-2">✕</span> Cancelar y Volver
                     </a>
                 </div>

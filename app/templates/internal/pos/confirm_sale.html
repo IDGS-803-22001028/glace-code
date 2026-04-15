@@ -242,10 +242,11 @@
         for (const item of carrito) {
             subtotal += item.precio * item.cantidad;
         }
-        const iva = subtotal * 0.16;
-        total = subtotal + iva;
+        const total = subtotal;
+        const base = subtotal / 1.16;
+        const iva = subtotal - base;
 
-        if (subtotalTicket) subtotalTicket.innerText = `$${subtotal.toFixed(2)}`;
+        if (subtotalTicket) subtotalTicket.innerText = `$${base.toFixed(2)}`;
         if (ivaTicket) ivaTicket.innerText = `$${iva.toFixed(2)}`;
         if (totalTicket) totalTicket.innerText = `$${total.toFixed(2)}`;
         if (totalDestacado) totalDestacado.innerText = `$${total.toFixed(2)}`;

@@ -27,7 +27,8 @@
         {% if messages %}
         <div class="space-y-2 mb-8">
             {% for category, message in messages %}
-            <div class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% elif category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
+            <div
+                class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% elif category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -43,7 +44,7 @@
             </div>
             <input type="search" name="q" value="{{ request.args.get('q', '') }}"
                 class="block w-full p-5 pl-16 text-base text-gray-600 border border-gray-100 rounded-4xl bg-white shadow-sm focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all placeholder:text-gray-300 italic"
-                placeholder="Buscar por insumo, causa o fecha...">
+                placeholder="Buscar por insumo, producto, causa o fecha...">
         </form>
 
         <div
@@ -53,7 +54,7 @@
                     <thead>
                         <tr
                             class="border-b border-gray-100 uppercase tracking-widest text-[11px] font-black text-gray-400">
-                            <th class="px-6 py-10">Insumo</th>
+                            <th class="px-6 py-10">Ítem</th>
                             <th class="px-6 py-10 text-center">Cantidad</th>
                             <th class="px-6 py-10">Causa</th>
                             <th class="px-6 py-10 text-center">Acciones</th>
@@ -63,12 +64,14 @@
                         {% for item in mermas_obj.items %}
                         <tr class="group hover:bg-gray-50/40 transition-colors">
                             <td class="px-6 py-10 font-black text-[#2d3748] text-base">
-                                {{ item.insumo.nombre_insumo }}
+                                {{ item.insumo.nombre_insumo if item.insumo else item.producto.nombre_producto if
+                                item.producto else 'Desconocido' }}
                                 <p class="text-[10px] text-gray-400 font-medium uppercase tracking-tighter">{{
                                     item.fecha_registro.strftime('%d/%m/%Y %H:%M') }}</p>
                             </td>
                             <td class="px-6 py-10 text-center font-bold text-gray-600 italic">
-                                {{ item.cantidad_perdida }} {{ item.insumo.unidad_base.abreviatura }}
+                                {{ item.cantidad_perdida }} {{ item.insumo.unidad_base.abreviatura if item.insumo and
+                                item.insumo.unidad_base else 'uds' }}
                             </td>
                             <td class="px-6 py-10">
                                 <span class="px-4 py-2 rounded-full text-[11px] font-black border uppercase tracking-tighter

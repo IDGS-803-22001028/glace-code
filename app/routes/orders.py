@@ -1,8 +1,9 @@
+import json
 from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify, flash
 from flask_login import login_required, current_user  # type: ignore
 from app.decorators import roles_required
 from app import db, user_logger
-from app.models import Product, Venta, DetalleVenta, CustomOrder, Customer, Recipe, ProductionTask, RecipeDetail, Insumo
+from app.models import Product, Venta, DetalleVenta, CustomOrder, Customer, User, Recipe, ProductionTask, RecipeDetail, Insumo
 from datetime import datetime, timezone, timedelta
 
 orders_bp = Blueprint('orders', __name__)
@@ -41,6 +42,191 @@ def index():
         .all()
     )
     return render_template('internal/orders/index.html', sales=custom_sales)
+
+
+@orders_bp.route('/create-instore')
+@login_required
+@roles_required('seller')
+def create_instore():
+    products = Product.query.filter_by(is_active=True).order_by(Product.categoria, Product.nombre_producto).all()
+    customers = Customer.query.join(User).order_by(User.nombre_completo).all()
+    products_json = [
+        {
+            'id': product.id,
+            'nombre_producto': product.nombre_producto,
+            'precio_venta': product.precio_venta,
+            'pedido_minimo': product.pedido_minimo,
+        }
+        for product in products
+    ]
+    return render_template(
+        'internal/orders/create_instore.html',
+        products=products,
+        customers=customers,
+        products_json=products_json,
+    )
+
+
+@orders_bp.route('/create-instore', methods=['POST'])
+@login_required
+@roles_required('seller')
+def create_instore_post():
+    try:
+        cliente_id = request.form.get('cliente_id')
+        if not cliente_id:
+            flash('Debes seleccionar un cliente.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        try:
+            cliente_id_int = int(cliente_id)
+        except (ValueError, TypeError):
+            flash('Cliente no válido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        customer = db.session.get(Customer, cliente_id_int)
+        if not customer:
+            flash('Cliente no válido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        items_json = request.form.get('items_json')
+        if not items_json:
+            flash('Debes agregar al menos un producto al pedido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        try:
+            items = json.loads(items_json)
+        except Exception:
+            flash('Formato de productos inválido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        if not isinstance(items, list) or len(items) == 0:
+            flash('Debes agregar al menos un producto al pedido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        lugar_entrega = request.form.get('lugar_entrega', '').strip()
+        if not lugar_entrega:
+            flash('Debes indicar el lugar de recogida.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        fecha_entrega_str = request.form.get('fecha_entrega', '')
+        hora_entrega_str = request.form.get('hora_entrega', '')
+        if not fecha_entrega_str or not hora_entrega_str:
+            flash('Debes indicar la fecha y hora de entrega.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        try:
+            fecha_entrega = datetime.strptime(f'{fecha_entrega_str} {hora_entrega_str}', '%Y-%m-%d %H:%M')
+        except ValueError:
+            flash('Formato de fecha/hora inválido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        minimo = datetime.now().date() + timedelta(days=2)
+        if fecha_entrega.date() < minimo:
+            flash('La fecha de entrega debe ser al menos 2 días después de hoy.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        metodo_pago = request.form.get('metodo_pago')
+        if metodo_pago not in ('efectivo', 'tarjeta'):
+            flash('Método de pago inválido.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
+        total = 0.0
+        detalles = []
+        for item in items:
+            try:
+                product_id = int(item.get('product_id', 0))
+                cantidad = int(item.get('cantidad', 0))
+            except (TypeError, ValueError):
+                flash('Los datos de producto son inválidos.', 'danger')
+                return redirect(url_for('orders.create_instore'))
+
+            tipo_evento = (item.get('tipo_evento') or '').strip()
+            instrucciones = (item.get('instrucciones') or '').strip()
+
+            if cantidad < 1:
+                flash('Cada producto debe tener una cantidad válida.', 'danger')
+                return redirect(url_for('orders.create_instore'))
+
+            producto = db.session.get(Product, product_id)
+            if not producto or not producto.is_active:
+                flash(f'Producto inválido: {product_id}', 'danger')
+                return redirect(url_for('orders.create_instore'))
+
+            if cantidad < producto.pedido_minimo:
+                flash(f'La cantidad mínima para {producto.nombre_producto} es {producto.pedido_minimo}.', 'danger')
+                return redirect(url_for('orders.create_instore'))
+
+            if not tipo_evento:
+                flash('Cada producto debe tener un tipo de evento.', 'danger')
+                return redirect(url_for('orders.create_instore'))
+
+            subtotal = producto.precio_venta * cantidad
+            total += subtotal
+            detalles.append({
+                'producto': producto,
+                'cantidad': cantidad,
+                'precio': producto.precio_venta,
+                'tipo_evento': tipo_evento,
+                'instrucciones': instrucciones or 'Sin instrucciones'
+            })
+
+        if metodo_pago == 'efectivo':
+            try:
+                monto_recibido = float(request.form.get('monto_recibido', 0))
+            except (ValueError, TypeError):
+                monto_recibido = 0.0
+            if monto_recibido < total:
+                flash('El monto recibido debe ser igual o mayor al total.', 'danger')
+                return redirect(url_for('orders.create_instore'))
+            monto_cambio = monto_recibido - total
+        else:
+            monto_recibido = total
+            monto_cambio = 0.0
+
+        nueva_venta = Venta(
+            cliente_id=customer.id,
+            metodo_pago=metodo_pago,
+            monto_recibido=monto_recibido,
+            monto_cambio=monto_cambio,
+            lugar_entrega=lugar_entrega,
+            fecha_hora_entrega=fecha_entrega,
+            estado='Pendiente'
+        )
+        db.session.add(nueva_venta)
+        db.session.flush()
+
+        for detalle_info in detalles:
+            detalle = DetalleVenta(
+                venta_id=nueva_venta.id,
+                producto_id=detalle_info['producto'].id,
+                cantidad=detalle_info['cantidad'],
+                precio_unitario_aplicado=detalle_info['precio']
+            )
+            db.session.add(detalle)
+            db.session.flush()
+
+            custom_order = CustomOrder(
+                tipo_evento=detalle_info['tipo_evento'],
+                instrucciones_decoracion=detalle_info['instrucciones']
+            )
+            custom_order.detalle_venta_id = detalle.id
+            db.session.add(custom_order)
+
+        customer.puntos_acumulados += int(total / 10)
+
+        db.session.commit()
+        user_logger.log_action(
+            current_user,
+            module="Pedidos",
+            action=f"Se creó un pedido personalizado en tienda {nueva_venta.id}",
+            success=True,
+        )
+        flash('Pedido personalizado registrado como pendiente.', 'success')
+        return redirect(url_for('orders.index'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al registrar el pedido: {str(e)}', 'danger')
+        return redirect(url_for('orders.create_instore'))
 
 
 @orders_bp.route('/start-production/<int:venta_id>', methods=['POST'])
@@ -175,6 +361,7 @@ def add_to_cart(product_id: int):
     for item in cart:
         if item['product_id'] == product_id:
             item['cantidad'] += 1
+            item['pedido_minimo'] = item.get('pedido_minimo', product.pedido_minimo or 1)
             _save_cart(cart)
             return jsonify({
                 'ok': True,
@@ -190,6 +377,7 @@ def add_to_cart(product_id: int):
         'imagen_url': product.imagen_url or '',
         'categoria': product.categoria or '',
         'cantidad': 1,
+        'pedido_minimo': product.pedido_minimo or 1,
     })
     _save_cart(cart)
 
@@ -270,6 +458,18 @@ def checkout():
         if not cart_items:
             return jsonify({'ok': False, 'message': 'El carrito está vacío.'}), 400
 
+        for item in cart_items:
+            product = db.session.get(Product, item.get('product_id'))
+            if not product or not product.is_active:
+                return jsonify({'ok': False, 'message': f'Producto no disponible: {item.get("nombre", "Desconocido")}' }), 400
+
+            required_qty = product.pedido_minimo or 1
+            if int(item.get('cantidad', 0)) < required_qty:
+                return jsonify({
+                    'ok': False,
+                    'message': f'La cantidad mínima de pedido para {product.nombre_producto} es {required_qty}.'
+                }), 400
+
         # Create base Venta
         # We assume the payment is already 'simulated' success
         
@@ -304,7 +504,7 @@ def checkout():
             lugar_entrega=data.get('lugar_entrega', 'tienda').capitalize(),
             fecha_hora_entrega=fecha_entrega,
             estado='Pendiente',
-            monto_recibido=sum(item['precio'] * item['cantidad'] * 1.16 for item in cart_items),
+            monto_recibido=sum(item['precio'] * item['cantidad'] for item in cart_items),
             monto_cambio=0
         )
         db.session.add(nueva_venta)

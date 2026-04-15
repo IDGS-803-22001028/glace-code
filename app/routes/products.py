@@ -73,6 +73,7 @@ def create():
         categoria = (request.form.get('categoria') or '').strip()
         stock_str = request.form.get('stock') or '0'
         precio_venta_str = request.form.get('precio_venta') or '0'
+        pedido_minimo_str = request.form.get('pedido_minimo') or '1'
         descripcion = (request.form.get('descripcion') or '').strip()
         imagen = request.files.get('imagen')
 
@@ -80,22 +81,29 @@ def create():
             flash('El nombre y la categoría son obligatorios.', 'error')
             return render_template('internal/products/create.html', 
                                    nombre=nombre_producto, categoria=categoria, 
-                                   stock=stock_str, precio=precio_venta_str, descripcion=descripcion)
+                                   stock=stock_str, precio=precio_venta_str, pedido_minimo=pedido_minimo_str, descripcion=descripcion)
 
         try:
             stock = float(stock_str)
             precio_venta = float(precio_venta_str)
+            pedido_minimo = int(pedido_minimo_str)
         except ValueError:
-            flash('Stock y precio deben ser numéricos.', 'error')
+            flash('Stock, precio y pedido mínimo deben ser numéricos.', 'error')
             return render_template('internal/products/create.html', 
                                    nombre=nombre_producto, categoria=categoria, 
-                                   stock=stock_str, precio=precio_venta_str, descripcion=descripcion)
+                                   stock=stock_str, precio=precio_venta_str, pedido_minimo=pedido_minimo_str, descripcion=descripcion)
+
+        if pedido_minimo < 1:
+            flash('El pedido mínimo debe ser al menos 1.', 'error')
+            return render_template('internal/products/create.html', 
+                                   nombre=nombre_producto, categoria=categoria, 
+                                   stock=stock_str, precio=precio_venta_str, pedido_minimo=pedido_minimo_str, descripcion=descripcion)
 
         if not imagen or imagen.filename == '':
             flash('La imagen del producto es obligatoria.', 'error')
             return render_template('internal/products/create.html', 
                                    nombre=nombre_producto, categoria=categoria, 
-                                   stock=stock_str, precio=precio_venta_str, descripcion=descripcion)
+                                   stock=stock_str, precio=precio_venta_str, pedido_minimo=pedido_minimo_str, descripcion=descripcion)
 
         try:
             upload_folder = os.path.join(current_app.root_path, 'static', 'images', 'productos')
@@ -109,11 +117,10 @@ def create():
                 flash('Solo se permiten imágenes en formato JPG, PNG y GIF.', 'error')
                 return render_template('internal/products/create.html', 
                                        nombre=nombre_producto, categoria=categoria, 
-                                       stock=stock_str, precio=precio_venta_str, descripcion=descripcion)
+                                       stock=stock_str, precio=precio_venta_str, pedido_minimo=pedido_minimo_str, descripcion=descripcion)
 
             unique_filename = f"{uuid.uuid4().hex}{ext}"
             filepath = os.path.join(upload_folder, unique_filename)
-            
             imagen.save(filepath)
             imagen_url = f"/static/images/productos/{unique_filename}"
             
@@ -122,6 +129,7 @@ def create():
                 categoria=categoria,
                 precio_venta=precio_venta,
                 stock=stock,
+                pedido_minimo=pedido_minimo,
                 descripcion=descripcion,
                 imagen_url=imagen_url,
                 is_active=True
@@ -144,7 +152,7 @@ def create():
             flash('Ocurrió un error al guardar el producto. Intente de nuevo.', 'error')
             return render_template('internal/products/create.html', 
                                    nombre=nombre_producto, categoria=categoria, 
-                                   stock=stock_str, precio=precio_venta_str, descripcion=descripcion)
+                                   stock=stock_str, precio=precio_venta_str, pedido_minimo=pedido_minimo_str, descripcion=descripcion)
 
     return render_template('internal/products/create.html')
 
@@ -162,6 +170,7 @@ def edit(product_id: int):
         categoria = (request.form.get('categoria') or '').strip()
         stock_str = request.form.get('stock') or '0'
         precio_venta_str = request.form.get('precio_venta') or '0'
+        pedido_minimo_str = request.form.get('pedido_minimo') or str(product.pedido_minimo or 1)
         descripcion = (request.form.get('descripcion') or '').strip()
         imagen = request.files.get('imagen')
 
@@ -172,8 +181,13 @@ def edit(product_id: int):
         try:
             stock = float(stock_str)
             precio_venta = float(precio_venta_str)
+            pedido_minimo = int(pedido_minimo_str)
         except ValueError:
-            flash('Stock y precio deben ser numéricos.', 'error')
+            flash('Stock, precio y pedido mínimo deben ser numéricos.', 'error')
+            return redirect(url_for('products.edit', product_id=product.id))
+
+        if pedido_minimo < 1:
+            flash('El pedido mínimo debe ser al menos 1.', 'error')
             return redirect(url_for('products.edit', product_id=product.id))
 
         try:
@@ -205,6 +219,7 @@ def edit(product_id: int):
             product.categoria = categoria
             product.precio_venta = precio_venta
             product.stock = stock
+            product.pedido_minimo = pedido_minimo
             product.descripcion = descripcion
             
             db.session.commit()

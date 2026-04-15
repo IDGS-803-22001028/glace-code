@@ -267,7 +267,7 @@
                 </span>
                 <h3 class="text-base font-bold text-on-background leading-tight">{{ item.nombre }}</h3>
                 <div class="flex items-baseline gap-2 mt-0.5">
-                  <span class="text-sm font-black text-primary">${{ "{:,.2f}".format(item.precio * 1.16) }}</span>
+                  <span class="text-sm font-black text-primary">${{ "{:,.2f}".format(item.precio) }}</span>
                   <span class="text-[10px] text-slate-400">IVA incluido</span>
                 </div>
               </div>
@@ -296,11 +296,16 @@
                 <button type="button" onclick="changeQty({{ item.product_id }}, 1)" class="qty-btn">+</button>
               </form>
               <span class="ml-auto text-base font-black text-primary">
-                ${{ "{:,.2f}".format(item.precio * 1.16 * item.cantidad) }}
+                ${{ "{:,.2f}".format(item.precio * item.cantidad) }}
               </span>
             </div>
+            {% if item.cantidad < (item.pedido_minimo | default(1)) %} <div
+              class="mt-2 text-xs text-amber-700 font-semibold">
+              Cantidad mínima de pedido: {{ item.pedido_minimo | default(1) }}. Ajusta la cantidad para continuar.
           </div>
+          {% endif %}
         </div>
+      </div>
 
         <!-- ── Per-item customization accordion ── -->
         <div class="customization-panel">
@@ -335,7 +340,7 @@
                   data-product-id="{{ item.product_id }}"
                   class="custom-select w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 font-medium transition">
                   <option value="" disabled selected>Selecciona…</option>
-                  <option value="cumpleanos">🎂 Cumpleaños</option>
+                  <option value="cumpleaños">🎂 Cumpleaños</option>
                   <option value="boda">💍 Boda</option>
                   <option value="baby_shower">🍼 Baby Shower</option>
                   <option value="graduacion">🎓 Graduación</option>
@@ -391,7 +396,7 @@
 
         <div class="space-y-2 text-sm text-slate-600 mb-4">
           {% for item in cart_items %}
-          {% set precio_iva = item.precio * 1.16 %}
+          {% set precio_iva = item.precio %}
           <div class="flex justify-between">
             <span>{{ item.nombre }} × {{ item.cantidad }}</span>
             <span class="font-semibold">${{ "{:,.2f}".format(precio_iva * item.cantidad) }}</span>
@@ -399,9 +404,9 @@
           {% endfor %}
         </div>
 
-        {% set base = subtotal %}
-        {% set iva_monto = base * 0.16 %}
-        {% set total = base * 1.16 %}
+        {% set total = subtotal %}
+        {% set base = total / 1.16 %}
+        {% set iva_monto = total - base %}
         <div class="space-y-2 text-sm border-t border-primary/10 pt-4">
           <div class="flex justify-between text-slate-500">
             <span>Subtotal (sin IVA)</span>
@@ -522,6 +527,11 @@
 <script>
   // ── Product IDs in cart ──────────────────────────────────────
   const cartProductIds = {{ cart_items | map(attribute = 'product_id') | list | tojson }};
+  const cartProductMinById = {
+    {% for item in cart_items %}
+   {{ item.product_id }}: {{ item.pedido_minimo | default (1) }} {% if not loop.last %}, {% endif %}
+  {% endfor %}
+  };
 
   // ── Lead time validation (Set min date on load) ──────────────────
   document.addEventListener('DOMContentLoaded', () => {
@@ -566,7 +576,24 @@
 
   // ── Confirm order ────────────────────────────────────────────
   function confirmOrder() {
-    // 1. Validar personalización por postre
+    // 1. Validar cantidades mínimas de pedido
+    for (const pid of cartProductIds) {
+      const qtyInput = document.getElementById('qty-input-' + pid);
+      const qty = parseInt(qtyInput?.value || '1', 10);
+      const minQty = cartProductMinById[pid] || 1;
+      if (qty < minQty) {
+        const productName = document.querySelector(`#qty-form-${pid}`)?.closest('.cart-item-card')?.querySelector('h3')?.textContent?.trim() || 'este producto';
+        Swal.fire({
+          icon: 'warning',
+          title: 'Cantidad mínima no cumplida',
+          html: `<strong>${productName}</strong> requiere al menos ${minQty} unidades para completar el pedido.`,
+          confirmButtonColor: '#ec135b',
+        });
+        return;
+      }
+    }
+
+    // 2. Validar personalización por postre
     for (const pid of cartProductIds) {
       const eventoEl = document.getElementById('tipo_evento_' + pid);
       const instruccionesEl = document.getElementById('instrucciones_' + pid);
@@ -596,7 +623,7 @@
       }
     }
 
-    // 2. Validar Datos de Entrega
+    // 3. Validar Datos de Entrega
     const fecha = document.getElementById('fecha_entrega').value;
     const hora = document.getElementById('hora_entrega').value;
     const lugar = document.getElementById('lugar_entrega').value;
@@ -627,9 +654,8 @@
     }
 
     // 3. Mostrar Pasarela de Pago
-    const total = {{ (subtotal * 1.16) | tojson
-  }};
-  showPaymentGateway(total);
+    const total = {{ subtotal | tojson }};
+    showPaymentGateway(total);
   }
 
   function showPaymentGateway(total) {
