@@ -290,46 +290,14 @@ def recipes(product_id: int):
     import json
     
     insumos = db.session.query(Insumo).filter_by(is_active=True).order_by(Insumo.nombre_insumo).all()
-
-    edit_recipe_id = request.args.get('recipe_id', type=int)
-    recipe_to_edit = None
-    detalle_edit = []
-
-    if edit_recipe_id:
-        recipe_to_edit = db.session.query(Recipe).filter_by(id=edit_recipe_id, product_id=product.id, is_active=True).first()
-        if recipe_to_edit:
-            for d in recipe_to_edit.details:
-                if d.is_active:
-                    unidades_permitidas = []
-                    if d.insumo.unidad_base:
-                        unidades_permitidas.append({
-                            "id": d.insumo.unidad_base.id,
-                            "nombre": d.insumo.unidad_base.nombre,
-                            "abreviatura": d.insumo.unidad_base.abreviatura
-                        })
-                    for conv in d.insumo.conversiones:
-                        if conv.is_active and conv.unidad_destino:
-                            unidades_permitidas.append({
-                                "id": conv.unidad_destino.id,
-                                "nombre": conv.unidad_destino.nombre,
-                                "abreviatura": conv.unidad_destino.abreviatura
-                            })
-                            
-                    detalle_edit.append({
-                        'insumo_id': d.insumo_id,
-                        'cantidad': d.cantidad,
-                        'unidad_medida_id': d.unidad_medida_id,
-                        'unidades_permitidas': unidades_permitidas
-                    })
-
     recipes_list = db.session.query(Recipe).filter_by(product_id=product.id, is_active=True).all()
 
     return render_template('internal/products/recipes.html', 
                            product=product,
                            insumos=insumos,
                            recipes=recipes_list,
-                           recipe_to_edit=recipe_to_edit,
-                           detalle_edit_json=json.dumps(detalle_edit))
+                           recipe_to_edit=None,
+                           detalle_edit_json=json.dumps([]))
 
 @products_bp.route('/<int:product_id>/recipes/create', methods=['POST'])
 @login_required
@@ -397,6 +365,59 @@ def create_recipe(product_id: int):
         flash('Ocurrió un error al crear la receta.', 'error')
 
     return redirect(url_for('products.recipes', product_id=product.id))
+
+@products_bp.route('/<int:product_id>/recipes/edit/<int:recipe_id>', methods=['GET'])
+@login_required
+@roles_required('admin', 'chef')
+def edit_recipe_form(product_id: int, recipe_id: int):
+    product = db.session.query(Product).filter_by(id=product_id, is_active=True).first()
+    if not product:
+        flash('Producto no encontrado.', 'error')
+        return redirect(url_for('products.index'))
+
+    from app.models import Insumo, Recipe, RecipeDetail
+    import json
+    
+    recipe_to_edit = db.session.query(Recipe).filter_by(id=recipe_id, product_id=product.id, is_active=True).first()
+    if not recipe_to_edit:
+        flash('Receta no encontrada.', 'error')
+        return redirect(url_for('products.recipes', product_id=product.id))
+
+    insumos = db.session.query(Insumo).filter_by(is_active=True).order_by(Insumo.nombre_insumo).all()
+    detalle_edit = []
+
+    for d in recipe_to_edit.details:
+        if d.is_active:
+            unidades_permitidas = []
+            if d.insumo.unidad_base:
+                unidades_permitidas.append({
+                    "id": d.insumo.unidad_base.id,
+                    "nombre": d.insumo.unidad_base.nombre,
+                    "abreviatura": d.insumo.unidad_base.abreviatura
+                })
+            for conv in d.insumo.conversiones:
+                if conv.is_active and conv.unidad_destino:
+                    unidades_permitidas.append({
+                        "id": conv.unidad_destino.id,
+                        "nombre": conv.unidad_destino.nombre,
+                        "abreviatura": conv.unidad_destino.abreviatura
+                    })
+                        
+            detalle_edit.append({
+                'insumo_id': d.insumo_id,
+                'cantidad': d.cantidad,
+                'unidad_medida_id': d.unidad_medida_id,
+                'unidades_permitidas': unidades_permitidas
+            })
+
+    recipes_list = db.session.query(Recipe).filter_by(product_id=product.id, is_active=True).all()
+
+    return render_template('internal/products/recipes.html', 
+                           product=product,
+                           insumos=insumos,
+                           recipes=recipes_list,
+                           recipe_to_edit=recipe_to_edit,
+                           detalle_edit_json=json.dumps(detalle_edit))
 
 @products_bp.route('/<int:product_id>/recipes/edit/<int:recipe_id>', methods=['POST'])
 @login_required
