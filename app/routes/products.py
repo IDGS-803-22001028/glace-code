@@ -435,22 +435,40 @@ def edit_recipe(product_id: int, recipe_id: int):
     recipe.cantidad_producida = cantidad_producida
     recipe.tiempo_estimado_min = tiempo_estimado_min
     
-    # Desactivar lógicamente todos los detalles antiguos
+    # Marcar todos los detalles antiguos como inactivos
     for d in recipe.details:
         d.is_active = False
 
-    # Insertar los nuevos detalles enviados en el formulario
+    # Procesar los nuevos detalles del formulario
+    insumos_nuevos = set()
     for i_id, cant, u_id in zip(insumo_ids, cantidades, unidades):
         if i_id and cant and u_id:
             try:
-                rd = RecipeDetail(
+                i_id_int = int(i_id)
+                insumos_nuevos.add(i_id_int)
+                
+                # Buscar si existe un detalle inactivo con el mismo insumo_id
+                existing_detail = db.session.query(RecipeDetail).filter_by(
                     recipe_id=recipe.id,
-                    insumo_id=int(i_id),
-                    cantidad=float(cant),
-                    unidad_medida_id=int(u_id),
-                    is_active=True
-                )
-                db.session.add(rd)
+                    insumo_id=i_id_int,
+                    is_active=False
+                ).first()
+                
+                if existing_detail:
+                    # Actualizar el detalle existente
+                    existing_detail.cantidad = float(cant)
+                    existing_detail.unidad_medida_id = int(u_id)
+                    existing_detail.is_active = True
+                else:
+                    # Crear un nuevo detalle
+                    rd = RecipeDetail(
+                        recipe_id=recipe.id,
+                        insumo_id=i_id_int,
+                        cantidad=float(cant),
+                        unidad_medida_id=int(u_id),
+                        is_active=True
+                    )
+                    db.session.add(rd)
             except ValueError:
                 pass
 
@@ -465,7 +483,7 @@ def edit_recipe(product_id: int, recipe_id: int):
         flash('Receta modificada exitosamente.', 'success')
     except Exception as e:
         db.session.rollback()
-        flash('Ocurrió un error al modificar la receta. Detalles: ' + str(e), 'error')
+        flash('Ocurrió un error al modificar la receta.', 'error')
 
     return redirect(url_for('products.recipes', product_id=product.id))
 
