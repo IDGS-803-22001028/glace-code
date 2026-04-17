@@ -50,9 +50,9 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700">Hora de entrega</label>
-                                <input type="time" name="hora_entrega" id="hora_entrega" required min="10:00" max="22:00"
+                                <input type="time" name="hora_entrega" id="hora_entrega" required min="10:00" max="21:00"
                                     class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
-                                <p class="text-[10px] text-slate-400 mt-1">Horario: 10:00 AM - 10:00 PM</p>
+                                <p class="text-[10px] text-slate-400 mt-1">Horario: 10:00 AM - 9:00 PM</p>
                             </div>
                         </div>
                     </div>
@@ -344,9 +344,9 @@
         const horaEntrega = document.getElementById('hora_entrega').value;
         if (horaEntrega) {
             const [hours, minutes] = horaEntrega.split(':').map(Number);
-            if (hours < 10 || hours > 22 || (hours === 22 && minutes > 0)) {
+            if (hours < 10 || hours > 21 || (hours === 21 && minutes > 0)) {
                 event.preventDefault();
-                alert('La hora de entrega debe estar entre las 10:00 AM y las 10:00 PM.');
+                alert('La hora de entrega debe estar entre las 10:00 AM y las 9:00 PM.');
                 return;
             }
         }
