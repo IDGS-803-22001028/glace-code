@@ -126,6 +126,43 @@
             </button>
         </div>
     </form>
+
+    <!-- Section 3: Respaldo de Base de Datos -->
+    <div class="pt-8 border-t border-gray-100">
+        <div class="flex items-center space-x-3 mb-5">
+            <div class="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
+                3
+            </div>
+            <h2 class="text-lg font-bold text-gray-900">Respaldos de Base de Datos</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Descargar -->
+            <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                <h3 class="font-bold text-gray-800 mb-2">Descargar Copia</h3>
+                <p class="text-sm text-gray-500 mb-4">Exporta un respaldo completo de la base de datos (clientes, productos, ventas, etc.) en formato JSON.</p>
+                <a href="{{ url_for('configuration.download_backup') }}" class="inline-flex items-center space-x-2 px-6 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Descargar Backup JSON</span>
+                </a>
+            </div>
+
+            <!-- Subir -->
+            <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                <h3 class="font-bold text-gray-800 mb-2">Restaurar Copia</h3>
+                <p class="text-sm text-gray-500 mb-4">Sube un archivo previamente descargado para restaurar los datos. <strong class="text-red-600">Se sobrescribirán los datos actuales.</strong></p>
+                <form action="{{ url_for('configuration.upload_backup') }}" method="POST" enctype="multipart/form-data" onsubmit="confirmRestore(event)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <div class="flex items-center space-x-3 mb-3">
+                        <input type="file" name="backup_file" accept=".json" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                    </div>
+                    <button type="submit" class="inline-flex items-center space-x-2 px-6 py-2.5 bg-red-600 rounded-xl text-sm font-semibold text-white hover:bg-red-700 transition cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Restaurar Datos</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -140,6 +177,24 @@
             };
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    function confirmRestore(event) {
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Restaurar Base de Datos?',
+            text: '¿Estás SEGURO de que deseas restaurar la base de datos? Esto eliminará todos los datos actuales y los reemplazará con los del respaldo. Esta acción NO se puede deshacer.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ec135b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, restaurar datos',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                event.target.submit();
+            }
+        });
     }
 </script>
 {% endblock %}
