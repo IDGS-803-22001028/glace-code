@@ -441,8 +441,9 @@
               <label for="hora_entrega" class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
                 Hora <span class="text-primary">*</span>
               </label>
-              <input type="time" id="hora_entrega" name="hora_entrega" required
+              <input type="time" id="hora_entrega" name="hora_entrega" required min="10:00" max="22:00"
                 class="custom-select w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 font-medium transition">
+              <p class="text-[10px] text-slate-400 mt-1">Horario: 10:00 AM - 10:00 PM</p>
             </div>
           </div>
 
@@ -627,12 +628,23 @@
     const fecha = document.getElementById('fecha_entrega').value;
     const hora = document.getElementById('hora_entrega').value;
     const lugar = document.getElementById('lugar_entrega').value;
-
     if (!fecha || !hora || !lugar) {
       Swal.fire({
         icon: 'warning',
         title: 'Datos de entrega faltantes',
         text: 'Por favor, completa la fecha, hora y lugar de entrega para tu pedido.',
+        confirmButtonColor: '#ec135b',
+      });
+      return;
+    }
+
+    // Validación de horario de apertura: 10:00 AM a 10:00 PM
+    const [hours, minutes] = hora.split(':').map(Number);
+    if (hours < 10 || hours > 22 || (hours === 22 && minutes > 0)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Horario fuera de servicio',
+        text: 'La hora de entrega debe estar dentro de nuestro horario: Lunes a Domingo de 10:00 AM a 10:00 PM.',
         confirmButtonColor: '#ec135b',
       });
       return;

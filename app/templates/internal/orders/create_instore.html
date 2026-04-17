@@ -50,8 +50,9 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700">Hora de entrega</label>
-                                <input type="time" name="hora_entrega" required
+                                <input type="time" name="hora_entrega" id="hora_entrega" required min="10:00" max="22:00"
                                     class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 bg-white">
+                                <p class="text-[10px] text-slate-400 mt-1">Horario: 10:00 AM - 10:00 PM</p>
                             </div>
                         </div>
                     </div>
@@ -302,6 +303,7 @@
 
         productSelect.value = '';
         document.getElementById('inputCantidad').value = '1';
+        document.getElementById('inputCantidad').min = 1;
         document.getElementById('inputEvento').value = '';
         document.getElementById('inputInstrucciones').value = '';
         renderItems();
@@ -324,12 +326,12 @@
     });
 
     document.getElementById('instoreOrderForm').addEventListener('submit', function (event) {
-        const total = parseFloat(totalInput.value || '0');
         if (items.length === 0) {
             event.preventDefault();
             alert('Debes agregar al menos un producto al pedido.');
             return;
         }
+        const total = parseFloat(totalInput.value || '0');
         if (metodoPagoInput.value === 'efectivo') {
             const recibido = parseFloat(montoRecibidoVisible.value || '0');
             if (recibido < total) {
@@ -338,6 +340,17 @@
                 return;
             }
         }
+
+        const horaEntrega = document.getElementById('hora_entrega').value;
+        if (horaEntrega) {
+            const [hours, minutes] = horaEntrega.split(':').map(Number);
+            if (hours < 10 || hours > 22 || (hours === 22 && minutes > 0)) {
+                event.preventDefault();
+                alert('La hora de entrega debe estar entre las 10:00 AM y las 10:00 PM.');
+                return;
+            }
+        }
+
         itemsJson.value = JSON.stringify(items);
     });
 

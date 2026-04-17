@@ -555,10 +555,15 @@
             mermasAgrupadas[key].items.push(merma);
         });
 
-        const contenidoOriginal = document.body.innerHTML;
+        // Crear un elemento div temporal fuera del body actual
+        const elementoTemporal = document.createElement('div');
+        elementoTemporal.style.position = 'absolute';
+        elementoTemporal.style.left = '-9999px';
+        elementoTemporal.style.top = '-9999px';
+        elementoTemporal.style.width = '650px';
 
-        const htmlReporte = `
-        <div style="width: 100%; max-width: 1000px; margin: 0 auto; padding: 30px; background: white; font-family: Arial, sans-serif;">
+        elementoTemporal.innerHTML = `
+        <div style="width: 650px; margin: 0; padding: 40px; background: white; font-family: Arial, sans-serif; box-sizing: border-box;">
             <!-- Encabezado -->
             <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #E91E8C; padding-bottom: 15px; margin-bottom: 30px;">
                 <div>
@@ -700,20 +705,81 @@
         </div>
     `;
 
-        document.body.innerHTML = htmlReporte;
+        // Agregar el elemento temporal al body
+        document.body.appendChild(elementoTemporal);
 
+        // Solución técnica definitiva para el error 'oklch' de Tailwind CSS v4:
+        // html2canvas (usado por html2pdf) analiza todas las hojas de estilo del documento actual.
+        // Para evitar que falle, eliminamos temporalmente todos los <link> y <style> del DOM.
+        const styleElements = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'));
+        const styleBackups = styleElements.map(s => ({
+            element: s,
+            parent: s.parentNode,
+            next: s.nextSibling
+        }));
+        styleElements.forEach(s => s.parentNode && s.parentNode.removeChild(s));
+
+        // Crear un contexto totalmente limpio (iframe) para el renderizado
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '1200px'; // Iframe más ancho para evitar recortes
+        document.body.appendChild(iframe);
+
+        const iframeDoc = iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`
+            <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: white; color: #333; }
+                        * { box-sizing: border-box; }
+                        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; }
+                    </style>
+                </head>
+                <body>
+                    ${elementoTemporal.innerHTML}
+                </body>
+            </html>
+        `);
+        iframeDoc.close();
+
+        // Configurar opciones del PDF
         const opt = {
-            margin: [0.3, 0.3, 0.3, 0.3],
+            margin: 0, // El margen se controla desde el HTML para evitar recortes
             filename: `Reporte_Completo_${periodo.replace(/\s+/g, '_')}.pdf`,
             image: { type: 'jpeg', quality: 1 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                width: 650
+            },
             jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
             pagebreak: { mode: ['css', 'legacy'] }
         };
 
-        html2pdf().set(opt).from(document.body).save().then(() => {
-            document.body.innerHTML = contenidoOriginal;
-            window.location.reload();
+        // Generar PDF desde el primer elemento del cuerpo del iframe
+        html2pdf().set(opt).from(iframeDoc.body.children[0]).save().then(() => {
+            // Restaurar estilos originales
+            styleBackups.forEach(backup => {
+                if (backup.next) backup.parent.insertBefore(backup.element, backup.next);
+                else backup.parent.appendChild(backup.element);
+            });
+            // Limpiar
+            document.body.removeChild(iframe);
+            document.body.removeChild(elementoTemporal);
+        }).catch((error) => {
+            // Restaurar estilos en caso de error
+            styleBackups.forEach(backup => {
+                if (backup.next) backup.parent.insertBefore(backup.element, backup.next);
+                else backup.parent.appendChild(backup.element);
+            });
+            console.error('Error al generar PDF:', error);
+            if (iframe && iframe.parentNode) document.body.removeChild(iframe);
+            if (elementoTemporal && elementoTemporal.parentNode) document.body.removeChild(elementoTemporal);
+            alert('Error al generar el PDF: ' + error.message);
         });
     }
 

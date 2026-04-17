@@ -125,6 +125,11 @@ def create_instore_post():
             flash('La fecha de entrega debe ser al menos 2 días después de hoy.', 'danger')
             return redirect(url_for('orders.create_instore'))
 
+        # Validación de horario de apertura: 10:00 AM a 10:00 PM
+        if not (10 <= fecha_entrega.hour < 22) and not (fecha_entrega.hour == 22 and fecha_entrega.minute == 0):
+            flash('La hora de entrega debe estar dentro de nuestro horario: 10:00 AM a 10:00 PM.', 'danger')
+            return redirect(url_for('orders.create_instore'))
+
         metodo_pago = request.form.get('metodo_pago')
         if metodo_pago not in ('efectivo', 'tarjeta'):
             flash('Método de pago inválido.', 'danger')
@@ -521,6 +526,13 @@ def checkout():
             return jsonify({
                 'ok': False, 
                 'message': 'Lo sentimos, los pedidos personalizados deben realizarse con al menos 2 días (48 horas) de anticipación.'
+            }), 400
+
+        # Validación de horario de apertura: 10:00 AM a 10:00 PM
+        if not (10 <= fecha_entrega.hour < 22) and not (fecha_entrega.hour == 22 and fecha_entrega.minute == 0):
+            return jsonify({
+                'ok': False,
+                'message': 'La hora de entrega debe estar dentro de nuestro horario: Lunes a Domingo de 10:00 AM a 10:00 PM.'
             }), 400
 
         nueva_venta = Venta(
