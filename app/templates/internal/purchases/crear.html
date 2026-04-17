@@ -165,7 +165,7 @@ function agregarProducto() {
             '</button>' +
         '</td>';
 
-    tbody.appendChild(row);
+    tbody.insertBefore(row, tbody.firstChild);
 }
 
 function actualizarUnidad(idx) {

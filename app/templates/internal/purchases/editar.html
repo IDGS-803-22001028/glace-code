@@ -188,7 +188,7 @@ function agregarProducto(initializing = false) {
             '</button>' +
         '</td>';
 
-    tbody.appendChild(row);
+    tbody.insertBefore(row, tbody.firstChild);
     return idx;
 }
 
