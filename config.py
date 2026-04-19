@@ -12,6 +12,11 @@ class Config:
     # MongoDB configuration
     MONGODB_URI = os.environ.get('MONGODB_URI') or 'mongodb://localhost:27017'
     MONGODB_DB = os.environ.get('MONGODB_DB') or 'maison_logs'
+    # Urls de conexión para los diferentes usuarios
+    ADMIN_DATABASE_URL = os.environ.get('ADMIN_DATABASE_URL')
+    CHEF_DATABASE_URL = os.environ.get('CHEF_DATABASE_URL')
+    VENDEDOR_DATABASE_URL = os.environ.get('VENDEDOR_DATABASE_URL')
+    CLIENTE_DATABASE_URL = os.environ.get('CLIENTE_DATABASE_URL')
 
 class DevelopmentConfig(Config):
     """Development configuration class"""
