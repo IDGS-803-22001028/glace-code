@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Verificar 2FA{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+    <div class="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
+        <h1 class="text-2xl font-bold text-slate-900">Verificacion en dos pasos</h1>
+        <p class="text-sm text-slate-600 mt-2">
+            Ingresa el codigo de 6 digitos generado por tu aplicacion autenticadora.
+        </p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mt-6 space-y-2">
+            {% for category, message in messages %}
+            <div class="rounded-xl border px-4 py-3 text-sm font-semibold {% if category == 'error' %}border-red-200 bg-red-50 text-red-700{% else %}border-slate-200 bg-slate-50 text-slate-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="mt-8 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Codigo 2FA</label>
+                <input
+                    type="text"
+                    name="code"
+                    inputmode="numeric"
+                    pattern="[0-9]{6}"
+                    maxlength="6"
+                    autocomplete="one-time-code"
+                    placeholder="Ej. 123456"
+                    required
+                    class="w-full h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-primary/50 focus:border-primary transition focus-visible:outline-none"
+                >
+            </div>
+            <button
+                type="submit"
+                class="w-full h-12 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition"
+            >
+                Verificar e ingresar
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

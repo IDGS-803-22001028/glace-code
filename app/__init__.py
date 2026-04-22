@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, request, url_for
 from flask_wtf.csrf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -80,6 +80,44 @@ def create_app():
         config = {}
         if mongo.db is not None:
             config = mongo.db['configuration'].find_one({'_id': 'main_config'}) or {}
-        return dict(sys_config=config)
+
+        def resolve_product_image(image_url: str | None) -> str:
+            fallback = url_for('static', filename='images/dessert-1.png')
+            if not image_url:
+                return fallback
+
+            raw = str(image_url).strip()
+            if raw.startswith(('http://', 'https://', 'data:')):
+                return raw
+
+            if raw.startswith('/static/'):
+                relative = raw[len('/static/'):]
+            elif raw.startswith('static/'):
+                relative = raw[len('static/'):]
+            else:
+                relative = raw.lstrip('/')
+
+            relative = relative.replace('\\', '/')
+            parts = [p for p in relative.split('/') if p]
+            if not parts or any(p == '..' for p in parts):
+                return fallback
+
+            static_root = app.static_folder or os.path.join(app.root_path, 'static')
+            file_path = os.path.join(static_root, *parts)
+            if os.path.isfile(file_path):
+                return url_for('static', filename='/'.join(parts))
+
+            return fallback
+
+        return dict(sys_config=config, resolve_product_image=resolve_product_image)
+
+    @app.after_request
+    def add_no_cache_headers(response):
+        # Prevent browser back-button from showing stale protected pages.
+        if request.endpoint != 'static':
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0, private'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
     
     return app

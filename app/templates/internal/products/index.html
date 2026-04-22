@@ -97,7 +97,7 @@
                             <div
                                 class="size-10 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden border border-slate-200">
                                 {% if product.imagen_url %}
-                                <img src="{{ product.imagen_url }}" alt="{{ product.nombre_producto }}"
+                                <img src="{{ resolve_product_image(product.imagen_url) }}" alt="{{ product.nombre_producto }}"
                                     class="w-full h-full object-cover">
                                 {% else %}
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"

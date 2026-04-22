@@ -256,6 +256,14 @@
             }
         });
 
+        // If the browser restores this page from bfcache, force a reload so
+        // server-side auth checks run again after logout.
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
         function confirmLogout(event) {
             event.preventDefault();
             Swal.fire({

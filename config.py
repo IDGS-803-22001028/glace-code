@@ -1,8 +1,13 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from files when available.
+# Some setups use a folder named .env for the virtual environment.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+for env_file in (".env", ".env.local"):
+    env_path = os.path.join(BASE_DIR, env_file)
+    if os.path.isfile(env_path):
+        load_dotenv(env_path)
 
 class Config:
     """Base configuration class"""
@@ -21,7 +26,7 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration class"""
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///dev.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///dev.db'
 
 class ProductionConfig(Config):
     """Production configuration class"""

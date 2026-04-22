@@ -50,6 +50,7 @@
             <!-- Form -->
             <form class="space-y-6" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ next or '' }}">
                 <div class="space-y-2">
                     <label class="block text-sm font-semibold text-slate-700">
                         Correo Electrónico

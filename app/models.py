@@ -19,6 +19,8 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(255), nullable=False)
     rol_asignado = db.Column(db.String(50), nullable=False, index=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    two_factor_enabled = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    two_factor_secret = db.Column(db.String(64), nullable=True)
 
     # 1:1 relationship with Customer
     customer = db.relationship("Customer", back_populates="user", uselist=False)
@@ -57,6 +59,9 @@ class User(db.Model, UserMixin):
 
     def is_superadmin(self) -> bool:
         return self.has_role(UserRole.SUPERADMIN)
+
+    def has_two_factor(self) -> bool:
+        return bool(self.two_factor_enabled and self.two_factor_secret)
 
     @staticmethod
     def normalize_email(email: str) -> str:
@@ -117,14 +122,27 @@ class Insumo(db.Model):
 
     @property
     def precio_estimado(self):
-        """Calcula el precio promedio de compra basado en el historial de compras activas en el último mes."""
+        """Calcula el costo promedio por unidad base con compras activas del ultimo mes."""
         now = datetime.now()
         last_month = now - timedelta(days=30)
         compras_activas = [detalle for detalle in self.compras if detalle.purchase and detalle.purchase.is_active and detalle.purchase.fecha_orden >= last_month]
         if not compras_activas:
             return 0.0
-        precios = [detalle.precio_unitario for detalle in compras_activas]
-        return round(sum(precios) / len(precios), 2)
+
+        total_costo = 0.0
+        total_cantidad_base = 0.0
+        for detalle in compras_activas:
+            cantidad_base = detalle.cantidad_en_unidad_base()
+            if cantidad_base is None or cantidad_base <= 0:
+                continue
+
+            total_costo += detalle.cantidad * detalle.precio_unitario
+            total_cantidad_base += cantidad_base
+
+        if total_cantidad_base <= 0:
+            return 0.0
+
+        return round(total_costo / total_cantidad_base, 6)
 
 class ConversionUnidad(db.Model):
     __tablename__ = 'CONVERSION_UNIDAD'

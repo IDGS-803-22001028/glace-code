@@ -169,21 +169,24 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                 {% if random_products %}
                     {% for p in random_products %}
-                    <div class="group relative h-95 overflow-hidden rounded-3xl shadow-lg">
+                    <div class="group relative h-95 overflow-hidden rounded-3xl shadow-lg bg-slate-900">
                         {% if p.imagen_url %}
                         <img alt="{{ p.nombre_producto }}"
-                            class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                            src="{{ p.imagen_url }}" />
+                            class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-0 transition-opacity duration-500"
+                            src="{{ resolve_product_image(p.imagen_url) }}"
+                            loading="eager" fetchpriority="high"
+                            onload="this.classList.remove('opacity-0'); this.parentElement.querySelector('[data-overlay]').classList.remove('opacity-0')" />
                         {% else %}
-                        <div class="absolute inset-0 w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform duration-700">
+                        <div class="absolute inset-0 w-full h-full bg-slate-800 flex items-center justify-center text-slate-400">
                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor" class="size-20 opacity-50"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z"/></svg>
                         </div>
                         {% endif %}
-                        <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/20 to-transparent">
-                        </div>
-                        <div class="absolute bottom-6 left-6 right-6">
-                            <p class="text-white text-xl font-bold">{{ p.nombre_producto }}</p>
-                            <p class="text-white/80 text-sm mt-1">{{ p.categoria.replace('_', ' ') }}</p>
+                        <div data-overlay class="opacity-0 transition-opacity duration-500">
+                            <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/20 to-transparent"></div>
+                            <div class="absolute bottom-6 left-6 right-6">
+                                <p class="text-white text-xl font-bold">{{ p.nombre_producto }}</p>
+                                <p class="text-white/80 text-sm mt-1">{{ p.categoria.replace('_', ' ') }}</p>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}

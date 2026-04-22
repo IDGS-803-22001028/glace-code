@@ -53,7 +53,7 @@
                 data-categoria="{{ producto.categoria }}" onclick="agregarAlCarrito(this)">
                 <div class="w-full h-36 bg-pink-50 flex items-center justify-center overflow-hidden">
                     {% if producto.imagen_url %}
-                    <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre_producto }}"
+                    <img src="{{ resolve_product_image(producto.imagen_url) }}" alt="{{ producto.nombre_producto }}"
                         class="w-full h-full object-cover">
                     {% else %}
                     <svg class="w-12 h-12 text-pink-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

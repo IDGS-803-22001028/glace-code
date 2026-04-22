@@ -59,7 +59,7 @@
                             <tr class="border-b border-gray-100">
                                 <th class="text-left pb-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Producto</th>
                                 <th class="text-left pb-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-32">Cantidad</th>
-                                <th class="text-left pb-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-32">Precio Unit.</th>
+                                <th class="text-left pb-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-32">Precio/Unidad</th>
                                 <th class="text-left pb-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider w-28">Total</th>
                                 <th class="w-10"></th>
                             </tr>
@@ -68,6 +68,7 @@
                         </tbody>
                     </table>
                     <div id="emptyMsg" class="text-center py-8 text-gray-400 text-sm">Haz clic en "+ Agregar Producto" para añadir insumos a la orden.</div>
+                    <p class="mt-3 text-xs text-gray-500">El precio se captura por la unidad seleccionada (kg, g, L, ml, u, etc.).</p>
                 </div>
             </div>
 
@@ -178,7 +179,7 @@ function agregarProducto(initializing = false) {
         '<td class="py-3 pr-3">' +
             '<div class="flex items-center">' +
                 '<span class="text-sm text-gray-400 mr-1">$</span>' +
-                '<input type="number" name="precio_unitario[]" min="0.01" step="0.01" required class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-pink-200" value="0.00" onchange="recalcular()" oninput="recalcular()">' +
+                '<input type="number" name="precio_unitario[]" min="0.01" step="0.01" required class="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:ring-2 focus:ring-pink-200" value="0.00" onchange="recalcular()" oninput="recalcular()" title="Precio por unidad seleccionada">' +
             '</div>' +
         '</td>' +
         '<td class="py-3 pr-3 text-sm font-semibold text-gray-800 subtotal-cell">$0.00</td>' +
